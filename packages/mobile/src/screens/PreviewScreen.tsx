@@ -20,6 +20,7 @@ import { MarkdownAdapter } from '@docket/shared';
 import MarkdownHighlighter from '../components/MarkdownHighlighter';
 import KeyboardToolbar from '../components/KeyboardToolbar';
 import FormatToolbar, { FormatAction } from '../components/FormatToolbar';
+import { useSettingsStore, ThemeMode } from '../store/settingsStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Preview'>;
 
@@ -27,13 +28,26 @@ const adapter = new MarkdownAdapter();
 const monoFont = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' });
 const EDITOR_FONT_SIZE = 14;
 const EDITOR_LINE_HEIGHT = 22;
+const AUTO_SAVE_DELAY = 2000; // 2秒无操作后自动保存
 
 type Mode = 'preview' | 'edit';
+type SaveStatus = 'saved' | 'unsaved' | 'saving';
+
+/** 根据用户设置和系统颜色方案计算是否为暗色模式 */
+function resolveIsDark(userTheme: ThemeMode, systemIsDark: boolean): boolean {
+  if (userTheme === 'dark') return true;
+  if (userTheme === 'light') return false;
+  return systemIsDark;
+}
 
 const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
   const { fileUri, fileName } = route.params;
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const systemIsDark = colorScheme === 'dark';
+
+  // 从设置 Store 获取用户主题偏好
+  const { theme: userTheme } = useSettingsStore();
+  const isDark = resolveIsDark(userTheme, systemIsDark);
 
   const [html, setHtml] = useState<string>('');
   const [rawContent, setRawContent] = useState<string>('');
@@ -41,7 +55,7 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>('preview');
-  const [saved, setSaved] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
 
   // 动画值
   const previewOpacity = useRef(new Animated.Value(1)).current;
@@ -52,6 +66,11 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
 
   // 追踪当前光标选区 {start, end}
   const selectionRef = useRef({ start: 0, end: 0 });
+
+  // 自动保存定时器
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 上一次自动保存时的内容（用于判断是否需要保存）
+  const lastAutoSavedRef = useRef<string>('');
 
   // 设置 header 右侧按钮
   useLayoutEffect(() => {
@@ -67,31 +86,59 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
         </TouchableOpacity>
       ),
     });
-  }, [navigation, mode, saved]);
+  }, [navigation, mode, saveStatus, isDark]);
 
-  /** 切换预览/编辑模式 */
-  const toggleMode = useCallback(() => {
-    if (mode === 'preview') {
-      // 进入编辑模式：同步内容
-      setEditContent(rawContent);
-      setMode('edit');
-      Animated.parallel([
-        Animated.timing(previewOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-        Animated.timing(editOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-      ]).start();
-    } else {
-      // 回到预览模式：重新渲染
-      const newContent = editContent;
-      setRawContent(newContent);
-      setSaved(true);
-      setMode('preview');
-      renderPreview(newContent);
-      Animated.parallel([
-        Animated.timing(previewOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-        Animated.timing(editOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-      ]).start();
+  /** 将内容写入磁盘 */
+  const saveToDisk = useCallback(async (content: string): Promise<boolean> => {
+    setSaveStatus('saving');
+    try {
+      await FileSystem.writeAsStringAsync(fileUri, content, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      setSaveStatus('saved');
+      return true;
+    } catch (e) {
+      console.error('保存文件失败', e);
+      setSaveStatus('unsaved');
+      return false;
     }
-  }, [mode, editContent, rawContent]);
+  }, [fileUri]);
+
+  /** 手动保存（从编辑模式回到预览模式时调用） */
+  const handleSave = useCallback(async (content: string) => {
+    const ok = await saveToDisk(content);
+    if (ok) {
+      setRawContent(content);
+      lastAutoSavedRef.current = content;
+    }
+  }, [saveToDisk]);
+
+  /** 自动保存（仅在编辑模式下触发） */
+  const triggerAutoSave = useCallback((content: string) => {
+    // 清除之前的定时器
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    // 设置新的自动保存定时器
+    autoSaveTimerRef.current = setTimeout(async () => {
+      if (content !== lastAutoSavedRef.current) {
+        const ok = await saveToDisk(content);
+        if (ok) {
+          lastAutoSavedRef.current = content;
+        }
+      }
+    }, AUTO_SAVE_DELAY);
+  }, [saveToDisk]);
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
 
   /** 渲染预览 HTML */
   const renderPreview = useCallback(async (content: string) => {
@@ -109,6 +156,35 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
     }
   }, [fileName, isDark]);
 
+  /** 切换预览/编辑模式 */
+  const toggleMode = useCallback(() => {
+    if (mode === 'preview') {
+      // 进入编辑模式：同步内容
+      setEditContent(rawContent);
+      setMode('edit');
+      Animated.parallel([
+        Animated.timing(previewOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(editOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]).start();
+    } else {
+      // 回到预览模式：先保存再渲染
+      const newContent = editContent;
+      // 清除自动保存定时器
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      handleSave(newContent).then(() => {
+        setMode('preview');
+        renderPreview(newContent);
+        Animated.parallel([
+          Animated.timing(previewOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+          Animated.timing(editOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+        ]).start();
+      });
+    }
+  }, [mode, editContent, rawContent, handleSave, renderPreview]);
+
   /** 初始加载文件 */
   const loadFile = useCallback(async () => {
     setLoading(true);
@@ -119,6 +195,7 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
       });
       setRawContent(content);
       setEditContent(content);
+      lastAutoSavedRef.current = content;
       await renderPreview(content);
     } catch (e) {
       console.error('加载文件失败', e);
@@ -131,6 +208,13 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
   useEffect(() => {
     loadFile();
   }, [loadFile]);
+
+  // 当主题变化时重新渲染预览
+  useEffect(() => {
+    if (mode === 'preview' && rawContent) {
+      renderPreview(rawContent);
+    }
+  }, [isDark]);
 
   /** 在文本中查找某位置所在行的起始位置 */
   const findLineStart = (text: string, pos: number): number => {
@@ -241,7 +325,6 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
 
       case 'codeblock':
         if (hasSelection) {
-          // 在多行选区外加围栏代码块
           newText = text.slice(0, start) + '```\n' + selText + '\n```' + text.slice(end);
           cursorPos = start + selText.length + 8;
         } else {
@@ -253,7 +336,7 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
       case 'link':
         if (hasSelection) {
           newText = text.slice(0, start) + '[' + selText + '](url)' + text.slice(end);
-          cursorPos = start + selText.length + 3; // 光标停在 url 中间
+          cursorPos = start + selText.length + 3;
         } else {
           newText = text.slice(0, start) + '[链接文字](url)' + text.slice(end);
           cursorPos = start + 6;
@@ -272,7 +355,8 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
     }
 
     setEditContent(newText);
-    setSaved(false);
+    setSaveStatus('unsaved');
+    triggerAutoSave(newText);
 
     // 设置光标位置
     setTimeout(() => {
@@ -280,19 +364,42 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
         selection: { start: cursorPos, end: cursorPos },
       });
     }, 0);
-  }, []);
+  }, [triggerAutoSave]);
 
   /** 键盘工具栏插入（简单追加，保留兼容） */
   const handleInsert = useCallback((insertText: string) => {
     setEditContent((prev) => {
-      return prev + insertText;
+      const newContent = prev + insertText;
+      setSaveStatus('unsaved');
+      triggerAutoSave(newContent);
+      return newContent;
     });
-    setSaved(false);
-  }, []);
+  }, [triggerAutoSave]);
+
+  /** 编辑内容变化处理 */
+  const handleEditChange = useCallback((text: string) => {
+    setEditContent(text);
+    setSaveStatus('unsaved');
+    triggerAutoSave(text);
+  }, [triggerAutoSave]);
 
   // 统计
   const wordCount = editContent.replace(/\s/g, '').length;
   const lineCount = editContent.split('\n').length;
+
+  // 保存状态文字和颜色
+  const getSaveStatusInfo = () => {
+    switch (saveStatus) {
+      case 'saving':
+        return { text: '保存中…', color: isDark ? '#58a6ff' : '#0550ae' };
+      case 'unsaved':
+        return { text: '未保存', color: isDark ? '#d29922' : '#9a6700' };
+      case 'saved':
+      default:
+        return { text: '已保存', color: isDark ? '#3fb950' : '#2da44e' };
+    }
+  };
+  const statusInfo = getSaveStatusInfo();
 
   if (loading) {
     return (
@@ -364,10 +471,7 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
                     },
                   ]}
                   value={editContent}
-                  onChangeText={(text) => {
-                    setEditContent(text);
-                    setSaved(false);
-                  }}
+                  onChangeText={handleEditChange}
                   onSelectionChange={(e) => {
                     selectionRef.current = e.nativeEvent.selection;
                   }}
@@ -398,8 +502,8 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
             <Text style={[styles.statsText, { color: isDark ? '#8b949e' : '#57606a' }]}>
               行数: {lineCount}
             </Text>
-            <Text style={[styles.statsText, { color: saved ? (isDark ? '#3fb950' : '#2da44e') : (isDark ? '#d29922' : '#9a6700') }]}>
-              {saved ? '已保存' : '未保存'}
+            <Text style={[styles.statsText, { color: statusInfo.color, fontWeight: '600' }]}>
+              {statusInfo.text}
             </Text>
           </View>
         </Animated.View>
