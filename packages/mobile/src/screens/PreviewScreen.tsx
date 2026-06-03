@@ -19,6 +19,7 @@ import type { RootStackParamList } from '../navigation/AppNavigator';
 import { MarkdownAdapter } from '@docket/shared';
 import MarkdownHighlighter from '../components/MarkdownHighlighter';
 import KeyboardToolbar from '../components/KeyboardToolbar';
+import FormatToolbar, { FormatAction } from '../components/FormatToolbar';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Preview'>;
 
@@ -48,6 +49,9 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
 
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
+
+  // 追踪当前光标选区 {start, end}
+  const selectionRef = useRef({ start: 0, end: 0 });
 
   // 设置 header 右侧按钮
   useLayoutEffect(() => {
@@ -128,12 +132,159 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
     loadFile();
   }, [loadFile]);
 
-  /** 插入文本到光标位置 */
+  /** 在文本中查找某位置所在行的起始位置 */
+  const findLineStart = (text: string, pos: number): number => {
+    if (pos <= 0) return 0;
+    const before = text.lastIndexOf('\n', pos - 1);
+    return before === -1 ? 0 : before + 1;
+  };
+
+  /** 在文本中查找某位置所在行的结束位置 */
+  const findLineEnd = (text: string, pos: number): number => {
+    const after = text.indexOf('\n', pos);
+    return after === -1 ? text.length : after;
+  };
+
+  /** 格式工具栏操作 —— 选区包裹/光标插入 */
+  const handleFormat = useCallback((action: FormatAction) => {
+    // 预览模式下点击格式按钮：先切到编辑模式，延迟执行格式化
+    if (mode === 'preview') {
+      setEditContent(rawContent);
+      setMode('edit');
+      Animated.parallel([
+        Animated.timing(previewOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(editOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]).start();
+      // 等切换动画完成后再执行格式化
+      setTimeout(() => {
+        applyFormat(rawContent, action, { start: rawContent.length, end: rawContent.length });
+      }, 250);
+      return;
+    }
+
+    applyFormat(editContent, action, selectionRef.current);
+  }, [mode, editContent, rawContent]);
+
+  /** 实际执行格式化的核心逻辑 */
+  const applyFormat = useCallback((text: string, action: FormatAction, sel: { start: number; end: number }) => {
+    const { start, end } = sel;
+    const hasSelection = start !== end;
+    const selText = text.slice(start, end);
+
+    let newText = text;
+    let cursorPos = start;
+
+    const lineStart = findLineStart(text, start);
+    const lineEnd = findLineEnd(text, start);
+    const currentLine = text.slice(lineStart, lineEnd);
+
+    switch (action) {
+      case 'bold':
+        if (hasSelection) {
+          newText = text.slice(0, start) + '**' + selText + '**' + text.slice(end);
+          cursorPos = start + selText.length + 4;
+        } else {
+          newText = text.slice(0, start) + '**加粗文字**' + text.slice(end);
+          cursorPos = start + 7;
+        }
+        break;
+
+      case 'italic':
+        if (hasSelection) {
+          newText = text.slice(0, start) + '*' + selText + '*' + text.slice(end);
+          cursorPos = start + selText.length + 2;
+        } else {
+          newText = text.slice(0, start) + '*斜体文字*' + text.slice(end);
+          cursorPos = start + 6;
+        }
+        break;
+
+      case 'strikethrough':
+        if (hasSelection) {
+          newText = text.slice(0, start) + '~~' + selText + '~~' + text.slice(end);
+          cursorPos = start + selText.length + 4;
+        } else {
+          newText = text.slice(0, start) + '~~删除线文字~~' + text.slice(end);
+          cursorPos = start + 8;
+        }
+        break;
+
+      case 'h1':
+        newText = text.slice(0, lineStart) + '# ' + currentLine + text.slice(lineEnd);
+        cursorPos = start + 2;
+        break;
+
+      case 'h2':
+        newText = text.slice(0, lineStart) + '## ' + currentLine + text.slice(lineEnd);
+        cursorPos = start + 3;
+        break;
+
+      case 'h3':
+        newText = text.slice(0, lineStart) + '### ' + currentLine + text.slice(lineEnd);
+        cursorPos = start + 4;
+        break;
+
+      case 'ul':
+        newText = text.slice(0, lineStart) + '- ' + currentLine + text.slice(lineEnd);
+        cursorPos = start + 2;
+        break;
+
+      case 'ol':
+        newText = text.slice(0, lineStart) + '1. ' + currentLine + text.slice(lineEnd);
+        cursorPos = start + 3;
+        break;
+
+      case 'blockquote':
+        newText = text.slice(0, lineStart) + '> ' + currentLine + text.slice(lineEnd);
+        cursorPos = start + 2;
+        break;
+
+      case 'codeblock':
+        if (hasSelection) {
+          // 在多行选区外加围栏代码块
+          newText = text.slice(0, start) + '```\n' + selText + '\n```' + text.slice(end);
+          cursorPos = start + selText.length + 8;
+        } else {
+          newText = text.slice(0, lineStart) + '```\n' + currentLine + '\n```' + text.slice(lineEnd);
+          cursorPos = lineStart + 4;
+        }
+        break;
+
+      case 'link':
+        if (hasSelection) {
+          newText = text.slice(0, start) + '[' + selText + '](url)' + text.slice(end);
+          cursorPos = start + selText.length + 3; // 光标停在 url 中间
+        } else {
+          newText = text.slice(0, start) + '[链接文字](url)' + text.slice(end);
+          cursorPos = start + 6;
+        }
+        break;
+
+      case 'image':
+        if (hasSelection) {
+          newText = text.slice(0, start) + '![' + selText + '](url)' + text.slice(end);
+          cursorPos = start + selText.length + 4;
+        } else {
+          newText = text.slice(0, start) + '![图片描述](url)' + text.slice(end);
+          cursorPos = start + 7;
+        }
+        break;
+    }
+
+    setEditContent(newText);
+    setSaved(false);
+
+    // 设置光标位置
+    setTimeout(() => {
+      inputRef.current?.setNativeProps({
+        selection: { start: cursorPos, end: cursorPos },
+      });
+    }, 0);
+  }, []);
+
+  /** 键盘工具栏插入（简单追加，保留兼容） */
   const handleInsert = useCallback((insertText: string) => {
-    // 通过 ref 方式获取当前选中范围受限，这里用简单策略：
-    // 在末尾插入（移动端更实用的做法是在光标处插入，但 TextInput ref 访问受限）
     setEditContent((prev) => {
-      // 尝试获取光标位置，如果不可用则在末尾追加
       return prev + insertText;
     });
     setSaved(false);
@@ -164,7 +315,6 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
   }
 
   const editorBg = isDark ? '#0d1117' : '#ffffff';
-  const editorTextColor = isDark ? '#c9d1d9' : '#24292f';
   const caretColor = isDark ? '#58a6ff' : '#1a1a2e';
 
   return (
@@ -218,6 +368,9 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
                     setEditContent(text);
                     setSaved(false);
                   }}
+                  onSelectionChange={(e) => {
+                    selectionRef.current = e.nativeEvent.selection;
+                  }}
                   multiline
                   textAlignVertical="top"
                   scrollEnabled={false}
@@ -251,6 +404,9 @@ const PreviewScreen: React.FC<Props> = ({ route, navigation }) => {
           </View>
         </Animated.View>
       )}
+
+      {/* 格式工具栏：预览和编辑模式均显示 */}
+      <FormatToolbar onFormat={handleFormat} isDark={isDark} />
     </View>
   );
 };
@@ -281,7 +437,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     padding: 16,
     textAlignVertical: 'top',
-    // 关键：背景透明、文字透明，只显示光标
     backgroundColor: 'transparent',
   },
   // Header 按钮
