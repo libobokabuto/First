@@ -12,6 +12,13 @@
     "build:mobile": "pnpm --filter @docket/mobile build",
     "build:desktop": "pnpm --filter @docket/desktop build",
     "build": "pnpm build:shared && pnpm build:mobile && pnpm build:desktop",
+    "generate-icon": "node scripts/generate-icon.js",
+    "package:desktop:win": "pnpm --filter @docket/desktop package:win",
+    "package:desktop:mac": "pnpm --filter @docket/desktop package:mac",
+    "package:desktop:linux": "pnpm --filter @docket/desktop package:linux",
+    "package:mobile:dev": "pnpm --filter @docket/mobile eas:dev:android",
+    "package:mobile:preview": "pnpm --filter @docket/mobile eas:preview:android",
+    "package:mobile:prod": "pnpm --filter @docket/mobile eas:prod:android",
     "typecheck": "pnpm --recursive typecheck",
     "lint": "pnpm --recursive lint"
   },
