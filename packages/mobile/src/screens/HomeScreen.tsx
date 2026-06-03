@@ -1,10 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MarkdownAdapter } from '@docket/shared';
+import type { RootStackParamList } from '../navigation/AppNavigator';
+
+type HomeNavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 const HomeScreen: React.FC = () => {
-  // 验证 MarkdownAdapter 可用
+  const navigation = useNavigation<HomeNavProp>();
   const adapter = new MarkdownAdapter();
   const adapterInfo = `${adapter.name} (${adapter.extensions.join(', ')})`;
 
@@ -17,6 +22,12 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.infoLabel}>已加载适配器</Text>
           <Text style={styles.infoValue}>{adapterInfo}</Text>
         </View>
+        <TouchableOpacity
+          style={styles.startButton}
+          onPress={() => navigation.navigate('FileList')}
+        >
+          <Text style={styles.startButtonText}>开始使用</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -66,6 +77,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     fontWeight: '500',
+  },
+  startButton: {
+    marginTop: 24,
+    backgroundColor: '#1a1a2e',
+    paddingHorizontal: 48,
+    paddingVertical: 14,
+    borderRadius: 10,
+  },
+  startButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '700',
   },
 });
 
