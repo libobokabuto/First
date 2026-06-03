@@ -12,9 +12,14 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { useFileStore } from '../store/fileStore';
+import type { RootStackParamList } from '../navigation/AppNavigator';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'FileList'>;
 
 interface FileItem {
   uri: string;
@@ -25,6 +30,7 @@ interface FileItem {
 type TabType = 'recent' | 'browse';
 
 const FileListScreen: React.FC = () => {
+  const navigation = useNavigation<NavigationProp>();
   const { recentFiles, addRecentFile, removeRecentFile } = useFileStore();
   const [activeTab, setActiveTab] = useState<TabType>('browse');
   const [browseFiles, setBrowseFiles] = useState<FileItem[]>([]);
@@ -83,6 +89,10 @@ const FileListScreen: React.FC = () => {
       if (!result.canceled && result.assets.length > 0) {
         const file = result.assets[0];
         addRecentFile({ uri: file.uri, name: file.name });
+        navigation.navigate('Preview', {
+          fileUri: file.uri,
+          fileName: file.name,
+        });
       }
     } catch (e) {
       Alert.alert('错误', '打开文件失败');
@@ -92,10 +102,12 @@ const FileListScreen: React.FC = () => {
   const handleOpenFile = useCallback(
     (file: { uri: string; name: string }) => {
       addRecentFile(file);
-      // TODO: 任务3中导航到预览页面
-      Alert.alert('打开文件', `即将打开: ${file.name}`);
+      navigation.navigate('Preview', {
+        fileUri: file.uri,
+        fileName: file.name,
+      });
     },
-    [addRecentFile]
+    [addRecentFile, navigation]
   );
 
   const handleCreateFile = useCallback(async () => {
@@ -123,11 +135,14 @@ const FileListScreen: React.FC = () => {
       const createdFile = { uri, name: fileName };
       addRecentFile(createdFile);
       scanMdFiles();
-      Alert.alert('成功', `已创建 ${fileName}`);
+      navigation.navigate('Preview', {
+        fileUri: uri,
+        fileName,
+      });
     } catch (e) {
       Alert.alert('错误', '创建文件失败');
     }
-  }, [newFileName, addRecentFile, scanMdFiles]);
+  }, [newFileName, addRecentFile, scanMdFiles, navigation]);
 
   const formatFileSize = (bytes?: number) => {
     if (bytes === undefined) return '';

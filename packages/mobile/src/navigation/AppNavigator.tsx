@@ -2,10 +2,12 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
 import FileListScreen from '../screens/FileListScreen';
+import PreviewScreen from '../screens/PreviewScreen';
 
 export type RootStackParamList = {
   Home: undefined;
   FileList: undefined;
+  Preview: { fileUri: string; fileName: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -29,6 +31,13 @@ export default function AppNavigator() {
         name="FileList"
         component={FileListScreen}
         options={{ title: '文件浏览' }}
+      />
+      <Stack.Screen
+        name="Preview"
+        component={PreviewScreen}
+        options={({ route }) => ({
+          title: route.params.fileName,
+        })}
       />
     </Stack.Navigator>
   );
