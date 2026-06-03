@@ -4,12 +4,14 @@ import { useSettingsStore } from '../store/settingsStore';
 import HomeScreen from '../screens/HomeScreen';
 import FileListScreen from '../screens/FileListScreen';
 import PreviewScreen from '../screens/PreviewScreen';
+import DocumentViewerScreen from '../screens/DocumentViewerScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
 export type RootStackParamList = {
   Home: undefined;
   FileList: undefined;
   Preview: { fileUri: string; fileName: string };
+  DocumentViewer: { fileUri: string; fileName: string };
   Settings: undefined;
 };
 
@@ -43,6 +45,13 @@ export default function AppNavigator() {
       <Stack.Screen
         name="Preview"
         component={PreviewScreen}
+        options={({ route }) => ({
+          title: route.params.fileName,
+        })}
+      />
+      <Stack.Screen
+        name="DocumentViewer"
+        component={DocumentViewerScreen}
         options={({ route }) => ({
           title: route.params.fileName,
         })}

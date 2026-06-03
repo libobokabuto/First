@@ -18,8 +18,21 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { useFileStore } from '../store/fileStore';
 import type { RootStackParamList } from '../navigation/AppNavigator';
+import { getFileIconLabel, getFileIconColor, getFormatLabel } from './DocumentViewerScreen';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'FileList'>;
+
+/** 所有支持的文件扩展名 */
+const SUPPORTED_EXTS = ['.md', '.pdf', '.docx', '.doc', '.xlsx', '.xls', '.et', '.csv'];
+
+/** 判断文件是否为 MD 格式 */
+const isMdFile = (name: string) => name.toLowerCase().endsWith('.md');
+
+/** 判断文件是否为支持的其他格式 */
+const isSupportedFile = (name: string) => {
+  const lower = name.toLowerCase();
+  return SUPPORTED_EXTS.some((ext) => lower.endsWith(ext));
+};
 
 interface FileItem {
   uri: string;
@@ -38,22 +51,22 @@ const FileListScreen: React.FC = () => {
   const [newFileModalVisible, setNewFileModalVisible] = useState(false);
   const [newFileName, setNewFileName] = useState('');
 
-  const scanMdFiles = useCallback(async () => {
+  const scanAllFiles = useCallback(async () => {
     setLoading(true);
     try {
       const docDir = FileSystem.documentDirectory;
       if (!docDir) return;
 
       const items = await FileSystem.readDirectoryAsync(docDir);
-      const mdFiles: FileItem[] = [];
+      const supportedFiles: FileItem[] = [];
 
       for (const name of items) {
-        if (name.endsWith('.md')) {
+        if (isSupportedFile(name)) {
           const uri = docDir + name;
           try {
             const info = await FileSystem.getInfoAsync(uri, { size: true });
             if (info.exists) {
-              mdFiles.push({
+              supportedFiles.push({
                 uri,
                 name,
                 size: (info as FileSystem.FileInfo & { size?: number }).size,
@@ -65,8 +78,8 @@ const FileListScreen: React.FC = () => {
         }
       }
 
-      mdFiles.sort((a, b) => a.name.localeCompare(b.name));
-      setBrowseFiles(mdFiles);
+      supportedFiles.sort((a, b) => a.name.localeCompare(b.name));
+      setBrowseFiles(supportedFiles);
     } catch (e) {
       console.error('扫描文件失败', e);
     } finally {
@@ -76,36 +89,61 @@ const FileListScreen: React.FC = () => {
 
   // 首次加载时扫描
   React.useEffect(() => {
-    scanMdFiles();
-  }, [scanMdFiles]);
+    scanAllFiles();
+  }, [scanAllFiles]);
 
   const handlePickFile = useCallback(async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['text/markdown', 'text/*', '*/*'],
+        type: [
+          'text/markdown',
+          'application/pdf',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.ms-excel',
+          'text/csv',
+          'text/comma-separated-values',
+          'text/*',
+          '*/*',
+        ],
         copyToCacheDirectory: true,
       });
 
       if (!result.canceled && result.assets.length > 0) {
         const file = result.assets[0];
         addRecentFile({ uri: file.uri, name: file.name });
-        navigation.navigate('Preview', {
-          fileUri: file.uri,
-          fileName: file.name,
-        });
+        if (isMdFile(file.name)) {
+          navigation.navigate('Preview', {
+            fileUri: file.uri,
+            fileName: file.name,
+          });
+        } else {
+          navigation.navigate('DocumentViewer', {
+            fileUri: file.uri,
+            fileName: file.name,
+          });
+        }
       }
     } catch (e) {
       Alert.alert('错误', '打开文件失败');
     }
-  }, [addRecentFile]);
+  }, [addRecentFile, navigation]);
 
   const handleOpenFile = useCallback(
     (file: { uri: string; name: string }) => {
       addRecentFile(file);
-      navigation.navigate('Preview', {
-        fileUri: file.uri,
-        fileName: file.name,
-      });
+      if (isMdFile(file.name)) {
+        navigation.navigate('Preview', {
+          fileUri: file.uri,
+          fileName: file.name,
+        });
+      } else {
+        navigation.navigate('DocumentViewer', {
+          fileUri: file.uri,
+          fileName: file.name,
+        });
+      }
     },
     [addRecentFile, navigation]
   );
@@ -134,7 +172,7 @@ const FileListScreen: React.FC = () => {
       setNewFileModalVisible(false);
       const createdFile = { uri, name: fileName };
       addRecentFile(createdFile);
-      scanMdFiles();
+      scanAllFiles();
       navigation.navigate('Preview', {
         fileUri: uri,
         fileName,
@@ -142,7 +180,7 @@ const FileListScreen: React.FC = () => {
     } catch (e) {
       Alert.alert('错误', '创建文件失败');
     }
-  }, [newFileName, addRecentFile, scanMdFiles, navigation]);
+  }, [newFileName, addRecentFile, scanAllFiles, navigation]);
 
   const formatFileSize = (bytes?: number) => {
     if (bytes === undefined) return '';
@@ -166,23 +204,32 @@ const FileListScreen: React.FC = () => {
     return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
-  const renderBrowseItem = ({ item }: { item: FileItem }) => (
+  const renderBrowseItem = ({ item }: { item: FileItem }) => {
+    const iconLabel = getFileIconLabel(item.name);
+    const iconColor = getFileIconColor(item.name);
+    return (
     <TouchableOpacity
       style={styles.fileItem}
       onPress={() => handleOpenFile(item)}
     >
-      <View style={styles.fileIcon}>
-        <Text style={styles.fileIconText}>MD</Text>
+      <View style={[styles.fileIcon, { backgroundColor: iconColor }]}>
+        <Text style={styles.fileIconText}>{iconLabel}</Text>
       </View>
       <View style={styles.fileInfo}>
         <Text style={styles.fileName}>{item.name}</Text>
-        <Text style={styles.fileMeta}>{formatFileSize(item.size)}</Text>
+        <Text style={styles.fileMeta}>
+          {getFormatLabel(item.name)}  {formatFileSize(item.size)}
+        </Text>
       </View>
       <Text style={styles.arrow}>›</Text>
     </TouchableOpacity>
-  );
+    );
+  };
 
-  const renderRecentItem = ({ item }: { item: { uri: string; name: string; lastOpened: number } }) => (
+  const renderRecentItem = ({ item }: { item: { uri: string; name: string; lastOpened: number } }) => {
+    const iconLabel = getFileIconLabel(item.name);
+    const iconColor = getFileIconColor(item.name);
+    return (
     <TouchableOpacity
       style={styles.fileItem}
       onPress={() => handleOpenFile(item)}
@@ -197,16 +244,19 @@ const FileListScreen: React.FC = () => {
         ]);
       }}
     >
-      <View style={styles.fileIcon}>
-        <Text style={styles.fileIconText}>MD</Text>
+      <View style={[styles.fileIcon, { backgroundColor: iconColor }]}>
+        <Text style={styles.fileIconText}>{iconLabel}</Text>
       </View>
       <View style={styles.fileInfo}>
         <Text style={styles.fileName}>{item.name}</Text>
-        <Text style={styles.fileMeta}>{formatTime(item.lastOpened)}</Text>
+        <Text style={styles.fileMeta}>
+          {getFormatLabel(item.name)}  {formatTime(item.lastOpened)}
+        </Text>
       </View>
       <Text style={styles.arrow}>›</Text>
     </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -241,7 +291,7 @@ const FileListScreen: React.FC = () => {
         >
           <Text style={styles.toolButtonText}>＋ 新建</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.toolButton} onPress={scanMdFiles}>
+        <TouchableOpacity style={styles.toolButton} onPress={scanAllFiles}>
           <Text style={styles.toolButtonText}>🔄 刷新</Text>
         </TouchableOpacity>
       </View>
@@ -260,14 +310,15 @@ const FileListScreen: React.FC = () => {
             renderItem={renderBrowseItem}
             contentContainerStyle={styles.listContent}
             refreshControl={
-              <RefreshControl refreshing={loading} onRefresh={scanMdFiles} />
+              <RefreshControl refreshing={loading} onRefresh={scanAllFiles} />
             }
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyIcon}>📄</Text>
-                <Text style={styles.emptyText}>没有找到 .md 文件</Text>
+                <Text style={styles.emptyText}>没有找到支持的文档文件</Text>
                 <Text style={styles.emptyHint}>
-                  点击「选择文件」选择已有文件，或「新建」创建一个
+                  支持 .md .pdf .docx .xlsx .csv 等格式{'\n'}
+                  点击「选择文件」或「新建」开始使用
                 </Text>
               </View>
             }
