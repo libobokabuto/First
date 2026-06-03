@@ -2,10 +2,13 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "module": "commonjs",
+    "moduleResolution": "node",
     "outDir": "dist/main",
-    "rootDir": "src",
+    "rootDir": "src/main",
     "declaration": false,
-    "sourceMap": true
+    "declarationMap": false,
+    "sourceMap": true,
+    "esModuleInterop": true
   },
-  "include": ["src/main/**/*", "../../packages/shared/src/**/*"]
+  "include": ["src/main/**/*"]
 }
