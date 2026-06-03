@@ -6,14 +6,14 @@
 ---
 
 ## 任务 1：Expo 项目初始化 & shared 集成
-**状态**：⬜ 待开始  
+**状态**：✅ 已完成  
 **目标**：Expo 项目跑起来，手机能看到 Hello World，`@docket/shared` 能正常引用
 
-- [ ] 安装 Expo 依赖（`npx expo install`）
-- [ ] 配置 pnpm workspace 路径别名，确保 mobile 能 import shared
-- [ ] 搭建 React Navigation 基础导航骨架
-- [ ] 验证 shared 的 MarkdownAdapter 可以正常导入调用
-- [ ] 手机/模拟器能看到启动页面
+- [x] 安装 Expo 依赖（`npx expo install`）
+- [x] 配置 pnpm workspace 路径别名，确保 mobile 能 import shared
+- [x] 搭建 React Navigation 基础导航骨架
+- [x] 验证 shared 的 MarkdownAdapter 可以正常导入调用
+- [x] 手机/模拟器能看到启动页面
 
 ---
 
@@ -130,7 +130,7 @@
 
 | 任务 | 名称 | 状态 |
 |------|------|------|
-| 1 | Expo 项目初始化 & shared 集成 | ⬜ 待开始 |
+| 1 | Expo 项目初始化 & shared 集成 | ✅ 已完成 |
 | 2 | MD 文件浏览器 | ⬜ 待开始 |
 | 3 | MD 渲染预览（所见即所得） | ⬜ 待开始 |
 | 4 | 源码编辑模式 | ⬜ 待开始 |
