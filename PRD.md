@@ -1,4 +1,4 @@
-# 全能文档阅读编辑器 — 产品需求文档 (PRD)
+# DocKit — 产品需求文档 (PRD)
 
 > **项目代号**: DocKit  
 > **版本**: v1.0.0-MVP  
@@ -11,362 +11,322 @@
 
 ### 1.1 产品定位
 
-DocKit 是一款**跨平台全能文档阅读与编辑器**，目标是成为"文档界的 VLC"——一站式打开、阅读、编辑主流办公文档格式，无需在多个软件之间切换。
+DocKit 是一款**跨端全能文档阅读编辑器**，覆盖手机（iOS/Android）和桌面（Windows/macOS/Linux）双端。核心定位是"文档界的 VLC"——一个 App 打开、阅读、编辑主流办公文档。
 
-### 1.2 核心价值
+**开发策略**：手机 MVP 优先。先在手机端打磨 Markdown 编辑核心体验，再扩展到桌面端做全功能编辑器。
 
-| 痛点 | DocKit 解决方案 |
-| --- | --- |
-| 阅读不同格式文档需要安装多款软件（Word、PDF 阅读器、Excel、PPT 等） | 一个软件打开所有格式 |
-| 免费软件功能受限或捆绑广告 | 完全开源免费，无广告 |
-| 跨平台体验割裂（Mac 用 Pages、Win 用 Office） | 统一体验，跨平台一致 |
-| 轻量编辑需求被迫打开重型办公套件 | 提供轻量编辑能力，秒开即用 |
+### 1.2 核心理念
+
+- **手机端**：Markdown 所见即所得编辑（刚需），其他格式只读查看
+- **桌面端**：全格式编辑能力，重度办公场景
+- **共享核心**：格式解析器、数据模型、类型定义跨端复用
 
 ### 1.3 目标用户
 
-- **学生/教师**：查阅课件、阅读论文、批注 PDF
-- **知识工作者**：日常轻度文档处理，不喜欢重型办公套件
-- **开发者**：阅读技术文档、编辑 Markdown
+- **学生/知识工作者**：手机上记笔记、写文档、查看各类文档
+- **开发者**：移动端 Markdown 编辑，桌面端技术文档写作
 - **普通用户**：偶尔需要查看或简单修改文档
 
 ---
 
-## 2. 功能需求
+## 2. 产品架构
 
-### 2.1 支持的文件格式
-
-#### 完全支持（读取 + 编辑）
-
-| 格式 | 扩展名 | 读取 | 编辑 | 说明 |
-| --- | --- | --- | --- | --- |
-| Markdown | `.md` | ✅ | ✅ | 源码编辑 + 即时预览 |
-| 纯文本 | `.txt` | ✅ | ✅ | 语法高亮 |
-| CSV | `.csv` | ✅ | ✅ | 表格视图编辑 |
-| 富文本 | `.rtf` | ✅ | ✅ | 基础格式编辑 |
-
-#### 读取优先 + 基础编辑
-
-| 格式 | 扩展名 | 读取 | 编辑 | 说明 |
-| --- | --- | --- | --- | --- |
-| Word | `.docx` | ✅ | ⚠️ 基础 | 文本修改、格式调整；复杂排版有限支持 |
-| Word (旧) | `.doc` | ✅ | ❌ | 仅查看，建议转为 docx 编辑 |
-| Excel | `.xlsx` | ✅ | ⚠️ 基础 | 单元格编辑、公式查看；图表/宏不支持 |
-| Excel (旧) | `.xls` | ✅ | ❌ | 仅查看 |
-| PowerPoint | `.pptx` | ✅ | ⚠️ 基础 | 文本修改、页面重排 |
-| PowerPoint (旧) | `.ppt` | ✅ | ❌ | 仅查看 |
-| PDF | `.pdf` | ✅ | ⚠️ 基础 | 文字批注、高亮、签名、表单填写 |
-| ODF 文档 | `.odt` `.ods` `.odp` | ✅ | ⚠️ 基础 | 开源格式支持 |
-| eBook | `.epub` | ✅ | ❌ | 电子书阅读 |
-
-#### 未来规划
-
-| 格式 | 扩展名 | 优先级 |
-| --- | --- | --- |
-| LaTeX | `.tex` | P2 |
-| HTML | `.html` | P2 |
-| 图片内文字 | `.png` `.jpg` (OCR) | P3 |
-| Apple Pages/Numbers/Keynote | `.pages` `.numbers` `.key` | P3 |
-
-### 2.2 核心功能模块
-
-#### 模块 A：文件管理与浏览
-
-- **本地文件浏览器**：树形目录结构，支持收藏夹、最近打开
-- **标签页系统**：多文档同时打开，标签页管理
-- **拖拽打开**：拖拽文件到窗口直接打开
-- **文件关联**：注册为系统默认打开程序
-- **搜索**：按文件名搜索本地文档
-
-#### 模块 B：通用阅读体验
-
-- **渲染引擎**：高质量文档渲染，保持原格式
-- **缩放**：平滑缩放 25% ~ 400%
-- **页面导航**：缩略图侧栏、大纲/目录跳转
-- **阅读模式**：
-  - 连续滚动模式
-  - 单页模式
-  - 双页模式（适合宽屏）
-- **暗色模式**：全局暗色主题，减少眼部疲劳
-- **全屏阅读**：专注模式，隐藏 UI 边框
-- **书签/历史位置**：记住上次阅读位置
-
-#### 模块 C：文本编辑能力
-
-- **基础编辑**：插入、删除、修改文本
-- **格式工具**：字体、大小、颜色、加粗、斜体、下划线
-- **段落格式**：对齐、缩进、行距、列表
-- **查找与替换**：支持正则表达式
-- **撤销/重做**：无限制历史栈
-- **拼写检查**：多语言支持
-
-#### 模块 D：特定格式编辑
-
-- **PDF 批注**：
-  - 高亮文字
-  - 下划线/删除线
-  - 文字批注（粘滞便签）
-  - 手写签名
-  - 表单填写
-- **Markdown**：
-  - 源码 / 预览双栏模式
-  - 语法高亮
-  - 自动补全
-  - 支持 GFM（表格、任务列表、数学公式）
-- **Excel/CSV**：
-  - 类表格编辑器
-  - 排序与筛选
-  - 基础公式计算
-  - 行列插入/删除
-
-#### 模块 E：导出与转换
-
-- **另存为**：支持跨格式转换（如 MD → PDF、DOCX → PDF）
-- **打印**：打印预览 + 系统打印
-- **导出选中**：导出特定页面/选区为新文件
-
-#### 模块 F：协作与云（P2）
-
-- **云存储集成**：Google Drive、OneDrive、iCloud
-- **版本历史**：本地版本记录，可回溯
-- **文档对比**：两个版本的差异对比
-
----
-
-## 3. 非功能需求
-
-### 3.1 性能
-
-| 指标 | 目标 |
-| --- | --- |
-| 启动时间 | < 2 秒（冷启动） |
-| 文件打开 | < 1 秒（10MB 以下文档） |
-| 大文件支持 | 100MB PDF 流畅滚动 |
-| 内存占用 | 空闲 < 200MB，打开文档后 < 500MB |
-| 渲染帧率 | 滚动/缩放 ≥ 60fps |
-
-### 3.2 跨平台
-
-| 平台 | 优先级 |
-| --- | --- |
-| Windows 10/11 | P0 |
-| macOS 12+ | P0 |
-| Linux (AppImage / deb / rpm) | P1 |
-| Web (PWA) | P2 |
-
-### 3.3 国际化
-
-- 界面语言：首发中文 + English
-- 后续支持：日语、韩语、欧洲主要语言
-- 文档内容：UTF-8 全字符集，RTL 文字（阿拉伯语、希伯来语）
-
-### 3.4 安全性
-
-- 沙箱文件访问（仅访问用户明确打开的文件）
-- PDF/文档中嵌入脚本默认禁用
-- 自动保存加密可选
-- 不上传任何用户数据（完全本地运行）
-
-### 3.5 可维护性
-
-- 模块化架构：每种格式作为独立插件/模块
-- 插件系统：允许社区贡献新格式支持
-- 自动化测试覆盖率 > 80%
-
----
-
-## 4. 技术方案（推荐）
-
-### 4.1 技术栈选择
-
-| 层级 | 技术 | 理由 |
-| --- | --- | --- |
-| **框架** | Electron | 跨平台桌面应用，丰富的 npm 生态 |
-| **UI** | React 18 + TypeScript | 类型安全，生态丰富 |
-| **状态管理** | Zustand | 轻量、简洁 |
-| **构建** | Vite + electron-builder | 快速 HMR，成熟打包 |
-| **包管理** | pnpm | 磁盘效率高 |
-
-### 4.2 格式处理库（核心依赖调研）
-
-| 格式 | 推荐库 | 成熟度 |
-| --- | --- | --- |
-| `.docx` 读取 | `mammoth.js` (转 HTML) | ⭐⭐⭐⭐⭐ |
-| `.docx` 编辑 | `docx` (JS 生成) | ⭐⭐⭐⭐ |
-| `.xlsx` / `.xls` | `SheetJS` (xlsx) | ⭐⭐⭐⭐⭐ |
-| `.pptx` 读取 | `pptx-preview` / 自研解析 | ⭐⭐⭐ |
-| `.pptx` 生成 | `PptxGenJS` | ⭐⭐⭐⭐ |
-| `.pdf` 渲染 | `pdfjs-dist` (Mozilla) | ⭐⭐⭐⭐⭐ |
-| `.pdf` 编辑 | `pdf-lib` | ⭐⭐⭐⭐ |
-| Markdown | `CodeMirror 6` + `markdown-it` | ⭐⭐⭐⭐⭐ |
-| RTF | `rtf.js` | ⭐⭐⭐ |
-| `.epub` | `epubjs` | ⭐⭐⭐⭐ |
-| Office 通用 | `@types/office-js` (有限) | ⭐⭐ |
-
-> ⚠️ **关键风险**：`.doc`、`.xls`、`.ppt` 旧格式是二进制封闭格式，JS 生态几乎没有可靠的编辑方案。**MVP 策略：旧格式只读，提供"转为新版格式"的一键升级功能。**
-
-### 4.3 架构概览
+### 2.1 Monorepo 结构
 
 ```
-┌────────────────────────────────────────┐
-│               Electron Shell           │
-│  ┌──────────────────────────────────┐  │
-│  │         React UI Layer           │  │
-│  │  ┌────────┐ ┌────────┐ ┌──────┐  │  │
-│  │  │ Reader │ │ Editor │ │ File │  │  │
-│  │  │ Panel  │ │ Panel  │ │ Mgr  │  │  │
-│  │  └────────┘ └────────┘ └──────┘  │  │
-│  └──────────────────────────────────┘  │
-│  ┌──────────────────────────────────┐  │
-│  │       Plugin / Adapter Layer     │  │
-│  │  ┌─────┐ ┌─────┐ ┌────┐ ┌────┐  │  │
-│  │  │ DOCX│ │ PDF │ │ XLS│ │ MD │  │  │
-│  │  │ Adp │ │ Adp │ │ Adp│ │ Adp│  │  │
-│  │  └─────┘ └─────┘ └────┘ └────┘  │  │
-│  └──────────────────────────────────┘  │
-│  ┌──────────────────────────────────┐  │
-│  │       Native / Node Layer        │  │
-│  │   File I/O  │  Sys Tray  │ Print │  │
-│  └──────────────────────────────────┘  │
-└────────────────────────────────────────┘
+First/
+├── package.json                    # 根 workspace
+├── tsconfig.base.json              # 共享 TS 配置
+├── packages/
+│   ├── shared/                     # 🔗 跨端共享层
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   ├── src/
+│   │   │   ├── model/              # 统一数据模型 (DocumentModel)
+│   │   │   ├── adapters/           # 格式解析适配器
+│   │   │   │   ├── base.ts         # FormatAdapter 接口
+│   │   │   │   ├── markdown.ts     # MD 解析 / 渲染
+│   │   │   │   ├── docx.ts         # DOCX 只读解析
+│   │   │   │   ├── pdf.ts          # PDF 只读解析
+│   │   │   │   ├── xlsx.ts         # XLSX/CSV 只读解析
+│   │   │   │   └── text.ts         # 纯文本
+│   │   │   └── utils/              # 通用工具
+│   │   └── __tests__/
+│   │
+│   ├── mobile/                     # 📱 手机端 (Expo / React Native)
+│   │   ├── package.json
+│   │   ├── app.json                # Expo 配置
+│   │   ├── tsconfig.json
+│   │   ├── src/
+│   │   │   ├── screens/            # 页面
+│   │   │   │   ├── EditorScreen    # MD 编辑器
+│   │   │   │   ├── ViewerScreen    # 通用文档查看器
+│   │   │   │   ├── FileBrowser     # 文件浏览
+│   │   │   │   └── SettingsScreen  # 设置
+│   │   │   ├── components/         # UI 组件
+│   │   │   │   ├── WysiwygEditor   # 所见即所得编辑器
+│   │   │   │   ├── MarkdownPreview # MD 预览
+│   │   │   │   ├── Toolbar         # 格式工具栏
+│   │   │   │   ├── DocViewer       # 通用文档渲染器
+│   │   │   │   └── FileTree        # 文件树组件
+│   │   │   ├── hooks/              # 自定义 hooks
+│   │   │   ├── store/              # Zustand 状态
+│   │   │   └── theme/              # 主题（暗色/亮色）
+│   │   └── assets/
+│   │
+│   └── desktop/                    # 🖥️ 电脑端 (Electron + React + Vite)
+│       ├── package.json
+│       ├── tsconfig.json
+│       ├── vite.config.ts
+│       ├── src/
+│       │   ├── main/               # Electron 主进程
+│       │   ├── renderer/           # React UI
+│       │   │   ├── App.tsx
+│       │   │   ├── pages/
+│       │   │   ├── components/
+│       │   │   ├── hooks/
+│       │   │   └── store/
+│       │   └── preload/            # 预加载脚本
+│       └── resources/
 ```
 
-每个格式适配器实现统一接口：
+### 2.2 共享层架构
 
 ```typescript
+// packages/shared/src/adapters/base.ts
 interface FormatAdapter {
   readonly name: string;
   readonly extensions: string[];
-  readonly canEdit: boolean;
-  
+  readonly canEdit: boolean;          // 是否支持编辑
+  readonly canEditOnMobile: boolean;  // 手机端是否可编辑
+
   read(buffer: ArrayBuffer): Promise<DocumentModel>;
   write(model: DocumentModel): Promise<ArrayBuffer>;
-  render(model: DocumentModel, container: HTMLElement): void;
-  getEditor?(container: HTMLElement, model: DocumentModel): Editor;
+  renderToHtml(model: DocumentModel): string;          // 输出 HTML，跨端通用
+  renderToMarkdown?(model: DocumentModel): string;     // 反向转 MD
+  getPreviewHtml?(model: DocumentModel): string;        // 纯预览用 HTML
+}
+
+// 统一文档模型
+interface DocumentModel {
+  format: string;
+  title: string;
+  content: any;         // 格式相关的结构化内容
+  metadata: DocumentMeta;
 }
 ```
 
 ---
 
-## 5. 开发路线图
+## 3. 功能需求
 
-### Phase 1：基础框架 + Markdown（MVP 最小闭环）
+### 3.1 手机端 MVP（Phase 1）
 
-**目标**：跑通 Electron + React 架构，实现 MD 阅读编辑全流程
+#### 模块 A：Markdown 所见即所得编辑器 🎯 核心
 
-- [ ] Electron 脚手架搭建
-- [ ] React + TypeScript + Vite 集成
-- [ ] 文件浏览器（本地目录树）
+| 功能 | 优先级 | 说明 |
+|---|---|---|
+| **所见即所得编辑** | P0 | 默认渲染模式，直接看到格式效果 |
+| **源码切换** | P0 | 点击进入编辑模式，显示原始 Markdown 源码 |
+| **格式工具栏** | P0 | 加粗/斜体/标题/列表/引用/链接/图片/代码块 |
+| **实时预览** | P0 | 编辑源码时旁边/下方实时渲染 |
+| **GFM 支持** | P0 | 表格、任务列表、删除线、代码高亮 |
+| **文件新建/打开/保存** | P0 | 本地 MD 文件管理 |
+| **最近文件列表** | P1 | 快速打开最近编辑的文档 |
+| **暗色/亮色主题** | P1 | 全局主题切换 |
+
+#### 模块 B：其他格式只读查看
+
+| 格式 | 优先级 | 说明 |
+|---|---|---|
+| 纯文本 (.txt) | P0 | 语法高亮 |
+| PDF (.pdf) | P1 | 滚动查看，缩放 |
+| Word (.docx) | P1 | 渲染为 HTML 查看 |
+| Excel (.xlsx / .csv) | P1 | 表格视图 |
+| PowerPoint (.pptx) | P2 | 幻灯片预览 |
+| EPUB (.epub) | P2 | 电子书阅读 |
+
+#### 模块 C：文件管理
+
+| 功能 | 优先级 | 说明 |
+|---|---|---|
+| 本地文件浏览器 | P1 | 浏览手机存储中的文档 |
+| 从其他 App 导入 | P2 | 分享菜单打开 |
+| 文件搜索 | P2 | 按文件名搜索 |
+
+### 3.2 桌面端（Phase 2+）
+
+在手机 MVP 基础上扩展：
+
+- **全格式编辑**：DOCX / PDF 批注 / XLSX / PPTX 编辑
+- **标签页系统**：多文档同时打开
+- **拖拽打开**：拖拽文件到窗口
+- **系统文件关联**：设为默认打开程序
+- **格式转换导出**：MD→PDF、DOCX→PDF 等
+- **打印支持**
+- **拼写检查**
+- **插件系统**
+
+---
+
+## 4. 手机端编辑器交互设计
+
+### 4.1 所见即所得模式（默认）
+
+```
+┌─────────────────────────────────┐
+│  ← 返回        标题.md    🔧 ✕  │  顶部栏
+├─────────────────────────────────┤
+│  H1  H2  H3  B  I  S  🔗  📷  │  格式工具栏
+├─────────────────────────────────┤
+│                                 │
+│  # 我的大标题                    │  渲染后的内容
+│  **加粗文字**普通文字            │  直接看到格式效果
+│                                 │
+│  - 列表项 1                     │
+│  - 列表项 2                     │
+│                                 │
+│  > 引用块                       │
+│                                 │
+├─────────────────────────────────┤
+│  字数: 123  |  行: 10           │  底部状态栏
+└─────────────────────────────────┘
+```
+
+### 4.2 源码编辑模式（点击编辑按钮切换）
+
+```
+┌─────────────────────────────────┐
+│  ← 返回        编辑中        ✓  │  顶部栏（显示"编辑中"）
+├─────────────────────────────────┤
+│  # 我的大标题                    │
+│                                 │
+│  **加粗文字**普通文字             │  原始 Markdown 源码
+│                                 │
+│  - 列表项 1                     │
+│  - 列表项 2                     │
+│                                 │
+│  > 引用块                       │
+├─────────────────────────────────┤
+│  [Markdown 语法高亮]             │  
+│  字数: 123  |  行: 10           │
+└─────────────────────────────────┘
+```
+
+- 默认进入文档 → 所见即所得渲染视图
+- 点击编辑按钮（🔧）→ 进入源码编辑模式，键盘弹出，语法高亮
+- 点击完成（✓）→ 退出编辑，回到渲染视图
+- 两种模式下格式工具栏均可用
+
+---
+
+## 5. 技术方案
+
+### 5.1 技术栈
+
+| 层级 | 桌面端 | 手机端 | 共享 |
+|---|---|---|---|
+| **框架** | Electron + React 18 | Expo (React Native) | — |
+| **语言** | TypeScript 5.x | TypeScript 5.x | TypeScript 5.x |
+| **构建** | Vite | Expo CLI | tsc |
+| **状态管理** | Zustand | Zustand | — |
+| **Markdown 编辑** | CodeMirror 6 | expo-rich-editor / 自研 | react-markdown + remark-gfm |
+| **Markdown 解析** | unified/remark | 同左 | unified + remark-gfm |
+| **PDF 渲染** | pdfjs-dist | react-native-pdf | pdfjs-dist (解析) |
+| **DOCX 解析** | mammoth.js | mammoth.js (同) | mammoth.js |
+| **XLSX 解析** | SheetJS | SheetJS (同) | SheetJS |
+| **包管理** | pnpm | pnpm | pnpm |
+| **Monorepo** | — | — | pnpm workspaces |
+
+### 5.2 手机端 MD 编辑器技术选型
+
+核心难题：React Native 环境下 WYSIWYG Markdown 编辑器。
+
+**推荐思路**：**混合模式**
+
+1. **渲染态**（默认）：用 `react-native-webview` 内嵌 HTML 渲染 `@packages/shared` 输出的 HTML，配合 `remark-gfm` 完整支持 GFM
+2. **编辑态**（点击编辑后）：使用 `TextInput` + 自定义键盘工具栏 + 语法高亮
+3. **格式工具栏**：选中文本后点击工具栏按钮，自动插入对应 Markdown 语法
+
+备选库（需进一步调研）：
+- `react-native-pell-rich-editor`：富文本编辑，可尝试适配 Markdown 输出
+- `expo-rich-editor`（实验性）
+- `react-native-webview` + TipTap/ProseMirror（WebView 内嵌方案）
+
+> MVP 阶段先用 **TextInput 源码编辑 + WebView 渲染预览** 方案，保证稳定性，后续迭代再做纯 WYSIWYG。
+
+---
+
+## 6. 开发路线图
+
+### Phase 1：手机 MVP — Markdown 编辑（本次）
+
+**目标**：跑通 Expo 架构，实现 MD 文档的阅读和源码编辑
+
+- [x] 搭建 Monorepo（pnpm workspaces）
+- [ ] 搭建 Expo 项目骨架（`packages/mobile`）
+- [ ] 搭建 shared 包（`packages/shared`）— 类型定义 + MD 解析
+- [ ] 文件浏览器 — 浏览本地 MD 文件
+- [ ] MD 渲染预览（WebView + react-markdown）
+- [ ] 源码编辑模式（TextInput + 语法高亮）
+- [ ] 格式工具栏（快速插入 MD 语法）
+- [ ] 所见即所得 / 源码模式切换
+- [ ] 暗色/亮色主题
+- [ ] 文件新建 / 保存 / 最近列表
+
+### Phase 2：手机端 — 其他格式只读
+
+- [ ] PDF 查看（react-native-pdf）
+- [ ] DOCX 查看（mammoth.js → HTML 渲染）
+- [ ] XLSX/CSV 表格查看（SheetJS）
+- [ ] 通用文档查看器统一界面
+
+### Phase 3：桌面端
+
+- [ ] Electron + Vite + React 脚手架
 - [ ] 标签页系统
-- [ ] Markdown 编辑器（CodeMirror 6 + 实时预览）
-- [ ] 暗色/亮色主题切换
-- [ ] 文件关联 & 拖拽打开
+- [ ] 全格式编辑器
+- [ ] 拖拽打开 / 文件关联
 
-### Phase 2：文档阅读矩阵
+### Phase 4：高级特性
 
-**目标**：覆盖主流格式的阅读体验
-
-- [ ] DOCX 阅读（mammoth.js → HTML 渲染）
-- [ ] PDF 阅读（pdfjs-dist）
-- [ ] XLSX/CSV 阅读（SheetJS → 表格视图）
-- [ ] PPTX 阅读（基础幻灯片预览）
-- [ ] EPUB 阅读（epubjs）
-- [ ] TXT / RTF 阅读
-- [ ] 统一阅读器界面的缩放、导航、暗色模式适配
-
-### Phase 3：编辑能力扩展
-
-**目标**：核心格式具备编辑能力
-
-- [ ] DOCX 基础编辑（文本修改 + 格式）
-- [ ] PDF 批注（高亮、注释、签名）
-- [ ] XLSX/CSV 表格编辑
-- [ ] PPTX 文本编辑
-- [ ] 全局查找替换
-- [ ] 拼写检查
-
-### Phase 4：格式转换 + 高级特性
-
-**目标**：跨格式能力 + 体验打磨
-
-- [ ] MD → PDF 导出
-- [ ] DOCX → PDF 导出
-- [ ] XLSX → CSV 导出
-- [ ] 旧格式 (.doc/.xls/.ppt) → 新版格式转换
-- [ ] 书签 & 阅读历史
-- [ ] 打印支持
-- [ ] 性能优化（大文件、虚拟滚动）
-
-### Phase 5：发布 & 生态
-
-**目标**：正式发布 + 社区建设
-
-- [ ] Windows / macOS / Linux 打包与签名
-- [ ] 自动更新机制
-- [ ] 官网 & 文档
-- [ ] 插件系统设计
-- [ ] 开源社区治理（CONTRIBUTING.md / Code of Conduct）
+- [ ] 格式转换导出
+- [ ] PDF 批注
+- [ ] 云存储集成
 
 ---
 
-## 6. 竞品分析
+## 7. 非功能需求
 
-| 产品 | 优势 | 劣势 |
-| --- | --- | --- |
-| **Microsoft Office** | 功能最全、格式兼容最好 | 付费、体积大、启动慢 |
-| **LibreOffice** | 开源免费、格式较全 | 界面老旧、macOS 体验差 |
-| **WPS Office** | 轻量、本土化好 | 广告多（免费版）、隐私争议 |
-| **OnlyOffice** | 协作好、Web 友好 | 桌面端体验一般 |
-| **Obsidian** | MD 编辑体验极佳 | 仅 Markdown，不涉及办公文档 |
-| **PDF Expert** | PDF 编辑体验好 | Mac/iOS 独占、仅 PDF |
-| **DocKit 机会** | 轻量、全格式、跨平台、开源 | 功能深度不如专业软件 |
+### 7.1 性能
 
-**差异化定位**：DocKit 不与 Office 比拼功能深度，而是主打**轻量 + 全面覆盖**——用户不需要"世界上最强的 Word 编辑器"，而需要"一个能打开同事发来的任何文档并做简单修改的工具"。
+| 指标 | 手机端目标 |
+|---|---|
+| 冷启动时间 | < 1.5 秒 |
+| MD 文件打开 | < 0.5 秒（1MB 以下） |
+| 渲染/源码切换 | < 100ms |
+| 内存占用 | 空闲 < 80MB |
 
----
+### 7.2 平台
 
-## 7. 风险与挑战
-
-| 风险 | 严重程度 | 缓解策略 |
-| --- | --- | --- |
-| 旧 Office 格式 (.doc, .xls, .ppt) 编辑困难 | 🔴 高 | MVP 仅支持阅读，提供转新版格式功能 |
-| PDF 完整编辑几乎不可行 | 🔴 高 | 聚焦批注类编辑，不追求"像 Word 一样编辑 PDF" |
-| 格式保真度无法 100% | 🟡 中 | 明确提示用户"复杂排版可能有差异"，建议复杂编辑用原生软件 |
-| 大文件性能问题 (100MB+ PDF) | 🟡 中 | 虚拟化渲染、按需加载页面 |
-| JS 生态库长期维护不确定性 | 🟢 低 | 选择活跃维护的库，适配器模式便于更换 |
-| Electron 内存占用偏高 | 🟡 中 | 懒加载、服务 Worker、考虑未来迁移至 Tauri |
+| 平台 | 优先级 |
+|---|---|
+| Android 8+ | P0 |
+| iOS 15+ | P0 |
+| Windows / macOS / Linux | P1 |
 
 ---
 
-## 8. 成功指标
+## 8. 手机 MVP 验收标准
 
-- **Phase 1 结束时**：可正常打开、编辑、保存 MD 和 TXT 文件
-- **Phase 2 结束时**：可流畅阅读 8+ 种格式，打开速度均 < 1 秒
-- **Phase 4 结束时**：
-  - 用户可在 DocKit 中完成 80% 的轻度文档操作
-  - GitHub Stars > 1000
-  - 周活跃安装 > 5000
-
----
-
-## 9. 附录
-
-### A. 术语表
-
-| 术语 | 定义 |
-| --- | --- |
-| Adapter | 格式适配器，负责解析、渲染、编辑特定文件格式的模块 |
-| DocumentModel | 所有格式解析后的统一中间表示 |
-| GFM | GitHub Flavored Markdown，Markdown 的扩展语法 |
-| PWA | Progressive Web App，渐进式 Web 应用 |
-
-### B. 参考资源
-
-- [Mozilla PDF.js](https://mozilla.github.io/pdf.js/)
-- [SheetJS](https://sheetjs.com/)
-- [mammoth.js](https://github.com/mwilliamson/mammoth.js)
-- [CodeMirror 6](https://codemirror.net/)
-- [Electron 文档](https://www.electronjs.org/docs)
+- [ ] 能浏览、打开手机上的 `.md` 文件
+- [ ] 打开后默认以渲染视图展示（所见即所得）
+- [ ] 点击编辑按钮后进入源码编辑模式，支持 Markdown 语法高亮
+- [ ] 点击完成后回到渲染视图
+- [ ] 格式工具栏可快速插入：标题、加粗、斜体、列表、链接、图片、代码块
+- [ ] 支持 GFM：表格、任务列表、删除线
+- [ ] 能新建、保存 MD 文件
+- [ ] 暗色/亮色主题可切换
+- [ ] 最近打开文件列表
 
 ---
-
-> **下一步**：请审阅此需求文档。如果方向认可，我将开始搭建 Phase 1 的 Electron + React 项目框架。

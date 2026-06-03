@@ -4,10 +4,17 @@ node_modules/
 # 构建产物
 dist/
 release/
+*.tsbuildinfo
+
+# Expo
+.expo/
+ios/
+android/
 
 # IDE
 .vscode/
 .idea/
+.reasonix/
 *.swp
 *.swo
 
@@ -22,3 +29,6 @@ Thumbs.db
 # 日志
 *.log
 npm-debug.log*
+
+# pnpm
+.pnpm-store/
